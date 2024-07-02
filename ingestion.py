@@ -1,14 +1,23 @@
 from dotenv import load_dotenv
-from langchain_text_splitters import CharacterTextSplitter
-from llama_index.readers.wikipedia import WikipediaReader
+from langchain_community.document_loaders import WikipediaLoader
+from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
+import os
+
 
 load_dotenv()
+print(os.environ["PINECONE_API_KEY"])
 
-reader = WikipediaReader()
-docs = reader.load_data(pages=["aran island"])
+docs = WikipediaLoader(query="Aran Island", load_max_docs=3).load()
 
-print(type(docs[0]))
+if "OPENAI_API_KEY" not in os.environ:
+    raise EnvironmentError(f"Environment variable OPENAI_API_KEY is not set")
 
-# text_splitter = CharacterTextSplitter(chunk_size=10000, chunk_overlap=500)
-# texts = text_splitter.split_documents(docs)
-# print(f"created {len(texts)} chunks")
+if "INDEX_NAME" not in os.environ:
+    raise EnvironmentError(f"Environment variable INDEX_NAME is not set")
+
+embeddings = OpenAIEmbeddings(openai_api_type=os.environ.get("OPENAI_API_KEY"))
+PineconeVectorStore.from_documents(
+    docs, embeddings,
+    index_name=os.environ.get("INDEX_NAME")
+    )
