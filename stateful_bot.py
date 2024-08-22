@@ -64,24 +64,33 @@ def answer_prompt(prompt: str, chat_history: list[list[str, str]] = []):
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
     res = rag_chain.invoke({"input": prompt,"chat_history": chat_history})
-
-    new_history = [HumanMessage(content=prompt), res["answer"]]
     
-    return res, new_history
+    return res
 
     
 
-# example invokation
+# example invokations
 if __name__ == "__main__":
 
+    # initialise chat history
     chat_hist = []
+
+    # invoke chain
     INPUT1 = "How many people live on Inis Mor?"
-    res, new_hist = answer_prompt(prompt=INPUT1, chat_history=chat_hist)
-    chat_hist.extend(new_hist)
-    print(res["answer"])
-
-    INPUT1 = "How big is it?"
-    res, new_hist = answer_prompt(prompt=INPUT1, chat_history=chat_hist)
-    chat_hist.extend(new_hist)
+    res = answer_prompt(prompt=INPUT1, chat_history=chat_hist)
 
     print(res["answer"])
+
+    # add prompt and result to chat history
+    new_hist = [HumanMessage(content=INPUT1), res["answer"]]
+    chat_hist.extend(new_hist)
+
+
+    # invoke chain again with history specific question
+    INPUT2 = "How big is it?"
+    res = answer_prompt(prompt=INPUT2, chat_history=chat_hist)
+
+    print(res["answer"])
+
+    new_hist = [HumanMessage(content=INPUT2), res["answer"]]
+    chat_hist.extend(new_hist)
