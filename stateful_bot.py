@@ -5,13 +5,11 @@ from langchain_pinecone import PineconeVectorStore
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.messages import HumanMessage
 
 load_dotenv()
 
-def answer_prompt(prompt, session_id):
+def answer_prompt(prompt: str, chat_history: list[list[str, str]] = []):
     # initialise llm
     llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
@@ -65,36 +63,25 @@ def answer_prompt(prompt, session_id):
 
     rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
-    # manage chat history
-    store = {}      # simplify this so history is passed in as a dict or list
+    res = rag_chain.invoke({"input": prompt,"chat_history": chat_history})
 
-    def get_session_history(session_id: str) -> BaseChatMessageHistory:
-        if session_id not in store:
-            store[session_id] = ChatMessageHistory()
-        return store[session_id]
-
-    conversational_rag_chain = RunnableWithMessageHistory(
-        rag_chain,
-        get_session_history,
-        input_messages_key="input",
-        history_messages_key="chat_history",
-        output_messages_key="answer",
-    )
-
-    res = conversational_rag_chain.invoke(
-        {"input": prompt},
-        config={
-            "configurable": {"session_id": session_id}
-        },
-    )
-
-    return res
+    new_history = [HumanMessage(content=prompt), res["answer"]]
+    
+    return res, new_history
 
     
 
 # example invokation
 if __name__ == "__main__":
-    INPUT = "How many islands are in the Aran Islands?"
-    res = answer_prompt(prompt=INPUT, session_id='abc123')
+
+    chat_hist = []
+    INPUT1 = "How many people live on Inis Mor?"
+    res, new_hist = answer_prompt(prompt=INPUT1, chat_history=chat_hist)
+    chat_hist.extend(new_hist)
+    print(res["answer"])
+
+    INPUT1 = "How big is it?"
+    res, new_hist = answer_prompt(prompt=INPUT1, chat_history=chat_hist)
+    chat_hist.extend(new_hist)
 
     print(res["answer"])
